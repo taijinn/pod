@@ -44,6 +44,7 @@ type DataForPayment struct {
 
 func getRestaurantInfoHandler(w http.ResponseWriter, r *http.Request){
 	var f DataGettingResInfo
+	log.Println("access")
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -58,7 +59,8 @@ func getRestaurantInfoHandler(w http.ResponseWriter, r *http.Request){
     log.Println(f)
     log.Println("pod end")
     
-    session, err := mgo.Dial("127.0.0.1:27017")
+    session, err := mgo.Dial("localhost:27017")
+    //session, err := mgo.Dial("127.0.0.1:27017")
     if err != nil {
         panic(err)
     }
@@ -80,7 +82,6 @@ func checkinHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
     err := json.NewDecoder(r.Body).Decode(&f)
-    	log.Println("moved")
 
     if err != nil {
     	http.Error(w, err.Error(), 400)
@@ -88,7 +89,8 @@ func checkinHandler(w http.ResponseWriter, r *http.Request) {
     }
     
  
-    session, err := mgo.Dial("127.0.0.1:27017")
+    session, err := mgo.Dial("localhost:27017")
+    //session, err := mgo.Dial("127.0.0.1:27017")
     if err != nil {
         panic(err)
     }
@@ -135,5 +137,5 @@ func main() {
 	http.HandleFunc("/myRestaurant", myRestaurantHandler)
 	http.HandleFunc("/myRevenue", myRevenueHandler)
 	*/
-    http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", nil)
 }
