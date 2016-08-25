@@ -4,6 +4,8 @@ import (
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
+	"log"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type RestaurantInfo struct {
@@ -32,13 +34,37 @@ type CheckinInfo struct {
 	Time time.Time `bson:"time"`
 	TableNum int `bson:"tableNum"`
 }
+type UserCredentials struct {
+	Username	string  `json:"username"`
+	Password	string	`json:"password"`
+}
+
+type UserInDatabase struct {
+	Username string
+	Password []byte
+}
+
+func GetEncriptedPass(userName string, session *mgo.Session) (bool, []byte) {
+	c := session.DB("pod").C("userPass")
+	var f UserInDatabase
+	err := c.Find(bson.M{"username": userName}).One(&f)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return false, nil
+		} else {
+			log.Println(err)
+		}
+	} 
+	return true, f.Password
+}
+
 func GetRestaurantInfo(phone string, userId string, session *mgo.Session) *RestaurantInfo {
 	// TODO for security
 	c := session.DB("pod").C("restaurantInfo")
 	result := RestaurantInfo{}
 	err := c.Find(bson.M{"phone": phone}).One(&result)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	return &result
 }
@@ -57,6 +83,69 @@ func Checkin(restaurantId bson.ObjectId, userId string, time time.Time, tableNum
 		panic(err)
 	}
 	return &result
+}
+func clear(b []byte) {
+    for i := 0; i < len(b); i++ {
+        b[i] = 0;
+    }
+}
+
+func Crypt(password []byte) ([]byte, error) {
+    defer clear(password)
+    return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+}
+func GetSigninAPI(user *UserCredentials, session *mgo.Session) string {
+	c := session.DB("pod").C("userPass")
+	var f UserInDatabase
+	err := c.Find(bson.M{"username": user.Username}).One(&f)
+	if err != nil { 
+		if err == mgo.ErrNotFound { // if no user registered
+			//insert or update toBeActive collection
+			c1 := session.DB("pod").C("toBeActive")
+			err1 := c1.Find(bson.M{"username": user.Username}).One(&f)
+			if err1 == nil {
+				//update toBeActive
+				key := bson.M{"username": user.Username}
+				cryptedpass, _ := Crypt([]byte(user.Password))
+				newpass := bson.M{"$set": bson.M{"password": cryptedpass}}
+				err2 := c1.Update(key, newpass)
+				if err2 != nil {
+					panic(err2)
+				}
+				//send an email to username
+				log.Println("update")
+				return "sent"
+			}else{
+				if err1 == mgo.ErrNotFound {
+					//insert into toBeActive collection
+					cryptedpass, _ := Crypt([]byte(user.Password))
+					err2 := c1.Insert(&UserInDatabase{Username:user.Username, Password:cryptedpass})
+					if err2 != nil {
+						panic(err2)
+					}
+					//send an email to username
+					log.Println("insert")
+					return "sent"
+				}else{
+					log.Fatal(err1)
+				}
+			}
+		} else {
+			log.Fatal(err)
+		}
+	} else{
+		// if user is already in the user name
+		//var p1, _ = Crypt([]byte(user.Password))
+		//fmt.Println("user")
+		//fmt.Println(p1)
+		err := bcrypt.CompareHashAndPassword(f.Password, []byte(user.Password))
+		if err == nil {//f.Password) {
+			return "login"
+		}else{
+			return "forget"
+		}
+	}
+	return "error"
 }
 /*
 
