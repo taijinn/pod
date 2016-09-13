@@ -15,21 +15,55 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Fetch"
-        android:id="@+id/button"
+        android:text="checkin"
+        android:id="@+id/button_checkin"
+        android:onClick="goCheckin"
+        android:layout_marginBottom="53dp"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="151dp" />
+        android:layout_centerHorizontal="true" />
 
-    <TextView
+
+    <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text=""
-        android:id="@+id/textView"
-        android:layout_above="@+id/button"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentStart="true"
+        android:text="preorder"
+        android:id="@+id/button_preorder"
+        android:layout_alignTop="@+id/button_checkin"
+        android:layout_toStartOf="@+id/button_myRestaurant" />
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="map"
+        android:id="@+id/button_map"
         android:layout_alignParentTop="true"
-        android:textIsSelectable="false" />
+        android:layout_alignParentEnd="true" />
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="delivery"
+        android:id="@+id/button_delivery"
+        android:layout_alignTop="@+id/button_checkin"
+        android:layout_toEndOf="@+id/button_myRestaurant"
+        android:layout_alignParentEnd="false" />
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="myRestaurant"
+        android:id="@+id/button_myRestaurant"
+        android:layout_below="@+id/button_preorder"
+        android:layout_alignEnd="@+id/button_checkin" />
+
+
+    <ListView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/listView"
+        android:layout_below="@+id/button_map"
+        android:layout_alignParentStart="true" />
 </RelativeLayout>

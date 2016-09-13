@@ -6,6 +6,8 @@ import (
 	"time"
 	"log"
 	"golang.org/x/crypto/bcrypt"
+	"net/smtp"
+	//"fmt"
 )
 
 type RestaurantInfo struct {
@@ -94,6 +96,55 @@ func Crypt(password []byte) ([]byte, error) {
     defer clear(password)
     return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 }
+func SendEmail(to string, body string) error {
+	from := "pomidor.eater@gmail.com"
+	pass := "1984norway"
+
+	msg := "From: " + from + "\n" +
+		"To: " + to + "\n" +
+		"Subject: Hello there\n\n" +
+		body
+
+	err := smtp.SendMail("smtp.gmail.com:587",
+		smtp.PlainAuth("", from, pass, "smtp.gmail.com"),
+		from, []string{to}, []byte(msg))
+
+	if err != nil {
+		log.Printf("smtp error: %s", err)
+	}
+	return err
+}
+/*
+func SendEmail(to string, body string) error {
+	c, err := smtp.Dial("localhost:25")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := c.Mail("info@localhost"); err != nil {
+		log.Fatal(err)
+	}
+	if err := c.Rcpt(to); err != nil {
+		log.Fatal(err)
+	}
+	// Send the email body.
+    wc, err := c.Data()
+    if err != nil {
+            log.Fatal(err)
+    }
+    _, err = fmt.Println(wc, body)
+    if err != nil {
+            log.Fatal(err)
+    }
+    err = wc.Close()
+    if err != nil {
+            log.Fatal(err)
+    }
+
+    // Send the QUIT command and close the connection.
+    return c.Quit()
+    
+}
+*/
 func GetSigninAPI(user *UserCredentials, session *mgo.Session) string {
 	c := session.DB("pod").C("userPass")
 	var f UserInDatabase
@@ -114,6 +165,9 @@ func GetSigninAPI(user *UserCredentials, session *mgo.Session) string {
 				}
 				//send an email to username
 				log.Println("update")
+				if err3 := SendEmail(user.Username, "updated"); err3 != nil {
+					log.Fatal(err3)
+				}
 				return "sent"
 			}else{
 				if err1 == mgo.ErrNotFound {
@@ -125,6 +179,9 @@ func GetSigninAPI(user *UserCredentials, session *mgo.Session) string {
 					}
 					//send an email to username
 					log.Println("insert")
+					if err3 := SendEmail(user.Username, "inserted"); err3 != nil {
+						log.Fatal(err3)
+					}
 					return "sent"
 				}else{
 					log.Fatal(err1)

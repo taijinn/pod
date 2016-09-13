@@ -5,9 +5,11 @@ package com.taijin.android.serverResponseObjects;
  */
 public class RestaurantInfo {
 
-    String ID;
+    //String ID;
     String Name;
     String Phone;
+    //Geometry geometry;
+
 
     @Override
     public String toString() {

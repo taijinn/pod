@@ -13,6 +13,9 @@ import (
 	"fmt"
 	"bytes"
 	"io/ioutil"
+	"strings"
+	"strconv"
+
 )
 
 const (
@@ -22,6 +25,7 @@ const (
     PAID = 3
     CANCELLED = 4
 )
+
 
 
 type DataGettingResInfo struct {
@@ -55,6 +59,12 @@ type LoginResponse struct {
 	WrongPass bool `json:"wrongPass"`
 }
 
+type LoginResFromFB struct {
+	Id string `json:"id"`
+	Email string `json:"email"`
+	Bday string `json:"birthday"`
+	Fbusername string `json:"username"`
+}
 
 
 const (
@@ -92,7 +102,10 @@ func Crypt(password []byte) ([]byte, error) {
     return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 }
 
-
+type AccessToken struct {
+ 	Token  string
+ 	Expiry int64
+ }
 func loginHandler(w http.ResponseWriter, r *http.Request){
 	var user api.UserCredentials
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -237,6 +250,78 @@ func checkinHandler(w http.ResponseWriter, r *http.Request) {
     log.Println("pod checkinInfo")
     json.NewEncoder(w).Encode(*checkinInfo)
 }
+func readHttpBody(response *http.Response) string {
+
+ 	log.Println("Reading body")
+
+ 	bodyBuffer := make([]byte, 5000)
+ 	var str string
+
+ 	count, err := response.Body.Read(bodyBuffer)
+
+ 	for ; count > 0; count, err = response.Body.Read(bodyBuffer) {
+
+ 		if err != nil {
+
+ 		}
+
+ 		str += string(bodyBuffer[:count])
+ 	}
+	log.Println("Finished reading body")
+ 	return str
+
+ }
+
+func GetAccessToken (client_id string, code string, secret string, callbackUri string) AccessToken {
+	log.Println("GetAccessToken")
+	response, err := http.Get("https://graph.facebook.com/oauth/access_token?client_id=" +
+ 		client_id + "&redirect_uri=" + callbackUri +
+ 		"&client_secret=" + secret + "&code=" + code)
+	if err == nil {
+		auth := readHttpBody(response)
+ 		log.Println(auth)
+
+ 		var token AccessToken
+ 		tokenArr := strings.Split(auth, "&")
+
+ 		token.Token = strings.Split(tokenArr[0], "=")[1]
+ 		expireInt, err := strconv.Atoi(strings.Split(tokenArr[1], "=")[1])
+
+ 		if err == nil {
+ 			token.Expiry = int64(expireInt)
+ 		}
+
+ 		return token
+	}
+	var token AccessToken
+
+ 	return token
+}
+
+func loginFBHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	code := r.FormValue("code")
+
+	ClientId := "527293797462183" //eventually get this from session
+	ClientSecret := "d686acc55b93eecf9cde351f8bed0df7"
+	RedirectURL := "http://taij.in:8080/loginFB"
+	accessToken := GetAccessToken(ClientId, code, ClientSecret, RedirectURL)
+
+	response, err := http.Get("https://graph.facebook.com/me?access_token=" + accessToken.Token)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+	}
+	var userInfo LoginResFromFB
+	err = json.NewDecoder(response.Body).Decode(&userInfo)
+	if err != nil {
+		log.Println(err)
+	}
+	w.Write([]byte(fmt.Sprintf("Username %s ID is %s and birthday is %s and email is %s<br>", userInfo.Fbusername,
+	 userInfo.Id, userInfo.Bday, userInfo.Email)))
+	img := "https://graph.facebook.com/" + userInfo.Id + "/picture?width=180&height=180"
+	w.Write([]byte("Photo is located at " + img + "<br>"))
+	w.Write([]byte("<img src='" + img + "'>"))
+}
 /*
 func orderHandler(w http.ResponseWriter, r *http.Request) {
 	var f DataForOrder
@@ -262,7 +347,7 @@ func main() {
 	http.HandleFunc("/signin", signinHandler)
 	http.HandleFunc("/login", loginHandler)
 	//http.HandleFunc("/forgetPass", forgetPassHandler)
-	//http.HandleFunc("/loginFB", loginFBHandler)
+	http.HandleFunc("/loginFB", loginFBHandler)
 	http.HandleFunc("/getRestaurantInfo", getRestaurantInfoHandler)
 	http.HandleFunc("/checkin", checkinHandler)
 	/*
